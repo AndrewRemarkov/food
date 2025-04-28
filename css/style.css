@@ -219,15 +219,6 @@ a {
     animation-duration: 1.5s;
 }
 
-@keyframes fade {
-    from {
-        opacity: 0.1;
-    }
-    to {
-        opacity: 1;
-    }
-}
-
 .offer {
     padding: 70px 0 100px 0;
     position: relative;
@@ -312,6 +303,12 @@ a {
     width: 100%;
     height: 390px;
 }
+
+.offer__slide--fade {
+    animation-name: fade;
+    animation-duration: 0.5s;
+}
+
 .offer__slide img {
     width: 100%;
     height: 100%;
@@ -680,4 +677,42 @@ a {
     left: 50%;
     bottom: -50%;
     translate: -50% 50%;
+}
+
+@keyframes fade {
+    from {
+        opacity: 0.1;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+.carousel-indicators {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 15;
+    display: flex;
+    justify-content: center;
+    margin-right: 15%;
+    margin-left: 15%;
+    list-style: none;
+}
+
+.dot {
+    box-sizing: content-box;
+    flex: 0 1 auto;
+    width: 30px;
+    height: 6px;
+    margin-right: 3px;
+    margin-left: 3px;
+    cursor: pointer;
+    background-color: #fff;
+    background-clip: padding-box;
+    border-top: 10px solid transparent;
+    border-bottom: 10px solid transparent;
+    opacity: 0.5;
+    transition: opacity 0.6s ease;
 }
