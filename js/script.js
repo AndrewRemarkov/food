@@ -44,16 +44,9 @@ window.addEventListener('DOMContentLoaded', function () {
     function getTimeRemaining(endtime) {
         const t = Date.parse(endtime) - Date.parse(new Date()),
             days = Math.floor(t / (1000 * 60 * 60 * 24)),
-            hours = Math.floor((t / (1000 * 60 * 60)) % 24),
-            minutes = Math.floor((t / (1000 * 60)) % 60),
-            seconds = Math.floor((t / 1000) % 60)
-
-        if (t <= 0) {
-            days = 0
-            hours = 0
-            minutes = 0
-            seconds = 0
-        }
+            seconds = Math.floor((t / 1000) % 60),
+            minutes = Math.floor((t / 1000 / 60) % 60),
+            hours = Math.floor((t / (1000 * 60 * 60)) % 24)
 
         return {
             total: t,
@@ -133,6 +126,7 @@ window.addEventListener('DOMContentLoaded', function () {
     })
 
     const modalTimerId = setTimeout(openModal, 300000)
+    // Изменил значение, чтобы не отвлекало
 
     function showModalByScroll() {
         if (window.pageYOffset + document.documentElement.clientHeight >= document.documentElement.scrollHeight) {
@@ -153,15 +147,33 @@ window.addEventListener('DOMContentLoaded', function () {
             this.price = price
             this.classes = classes
             this.parent = document.querySelector(parentSelector)
-            this.transfer = 27
-            this.changeToUAH()
+            this.transfer = null
         }
 
-        changeToUAH() {
-            this.price = this.price * this.transfer
+        async getUSDRate() {
+            try {
+                const response = await fetch('https://www.cbr-xml-daily.ru/daily_json.js')
+                const data = await response.json()
+                const usdRate = data.Valute.USD.Value
+                return usdRate
+            } catch (error) {
+                console.error('Ошибка при получении курса:', error)
+                return null
+            }
         }
 
-        render() {
+        async changeToUAH() {
+            this.transfer = await this.getUSDRate()
+
+            if (this.transfer) {
+                this.price = Math.round(this.price * this.transfer)
+            } else {
+                console.error('Не удалось получить курс USD')
+            }
+        }
+
+        async render() {
+            await this.changeToUAH()
             const element = document.createElement('div')
 
             if (this.classes.length === 0) {
@@ -178,7 +190,7 @@ window.addEventListener('DOMContentLoaded', function () {
                 <div class="menu__item-divider"></div>
                 <div class="menu__item-price">
                     <div class="menu__item-cost">Цена:</div>
-                    <div class="menu__item-total"><span>${this.price}</span> грн/день</div>
+                    <div class="menu__item-total"><span>${this.price}</span> руб/день</div>
                 </div>
             `
             this.parent.append(element)
@@ -188,18 +200,9 @@ window.addEventListener('DOMContentLoaded', function () {
     new MenuCard(
         'img/tabs/vegy.jpg',
         'vegy',
-        'Меню "Фитнес"',
-        'Меню "Фитнес" - это новый подход к приготовлению блюд: больше свежих овощей и фруктов. Продукт активных и здоровых людей. Это абсолютно новый продукт с оптимальной ценой и высоким качеством!',
+        'Меню “Фитнес”',
+        'Меню “Фитнес” - это новый подход к приготовлению блюд: больше свежих овощей и фруктов. Продукт активирует работу метаболизма, а также помогает сбросить лишний вес.',
         9,
-        '.menu .menu__wrapper'
-    ).render()
-
-    new MenuCard(
-        'img/tabs/post.jpg',
-        'post',
-        'Меню "Постное"',
-        'Меню “Постное” - это тщательный подбор ингредиентов: полное отсутствие продуктов животного происхождения, молоко из миндаля, овса, кокоса или гречки, правильное количество белков за счет тофу и импортных вегетарианских стейков.',
-        14,
         '.menu .menu__wrapper'
     ).render()
 
@@ -208,6 +211,15 @@ window.addEventListener('DOMContentLoaded', function () {
         'elite',
         'Меню “Премиум”',
         'В меню “Премиум” мы используем не только красивый дизайн упаковки, но и качественное исполнение блюд. Красная рыба, морепродукты, фрукты - ресторанное меню без похода в ресторан!',
+        14,
+        '.menu .menu__wrapper'
+    ).render()
+
+    new MenuCard(
+        'img/tabs/post.jpg',
+        'post',
+        'Меню “Постное”',
+        'Меню “Постное” - это тщательный подбор ингредиентов: полное отсутствие мяса и рыбы, а также тщательный контроль порций. Это поможет вам сбросить лишний вес без вреда для здоровья.',
         21,
         '.menu .menu__wrapper'
     ).render()
@@ -222,10 +234,32 @@ window.addEventListener('DOMContentLoaded', function () {
     }
 
     forms.forEach(item => {
-        postData(item)
+        bindPostData(item)
     })
 
-    function postData(form) {
+    const postData = async (url, data) => {
+        let res = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: data
+        })
+
+        return await res.json()
+    }
+
+    async function getResource(url) {
+        let res = await fetch(url)
+
+        if (!res.ok) {
+            throw new Error(`Could not fetch ${url}, status: ${res.status}`)
+        }
+
+        return await res.json()
+    }
+
+    function bindPostData(form) {
         form.addEventListener('submit', e => {
             e.preventDefault()
 
@@ -239,18 +273,9 @@ window.addEventListener('DOMContentLoaded', function () {
 
             const formData = new FormData(form)
 
-            const object = {}
-            formData.forEach(function (value, key) {
-                object[key] = value
-            })
+            const json = JSON.stringify(Object.fromEntries(formData.entries()))
 
-            fetch('server.php', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(object)
-            })
+            postData('https://jsonplaceholder.typicode.com/users', json)
                 .then(data => {
                     console.log(data)
                     showThanksModal(message.success)
@@ -288,3 +313,5 @@ window.addEventListener('DOMContentLoaded', function () {
         }, 4000)
     }
 })
+
+// Slider
